@@ -1,3 +1,7 @@
+mod instructions;
+
+use instructions::Instruction;
+use std::convert::TryFrom;
 use std::fs;
 
 pub struct CPU {
@@ -35,11 +39,15 @@ impl CPU {
 
     /// Fetches the opcode at the current program counter.
     pub fn fetch_opcode(&self) -> u16 {
-        0
+        let hi = (self.memory[self.pc] as u16) << 8;
+        let lo = self.memory[self.pc + 1] as u16;
+        hi | lo
     }
 
     /// Decodes the current opcode into a readable instruction.
-    pub fn decode_opcode(&self, opcode: u16) {}
+    pub fn decode_opcode(&self, opcode: u16) -> Result<Instruction, String> {
+        Instruction::try_from(opcode)
+    }
 
     /// Executes the specified instruction of the CPU.
     pub fn execute_instruction(&mut self) {}
