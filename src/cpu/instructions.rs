@@ -1,4 +1,3 @@
-use crate::cpu::instructions::Instruction::FlowJump;
 use std::convert::TryFrom;
 
 #[derive(Debug)]
@@ -116,7 +115,7 @@ impl TryFrom<u16> for Instruction {
             }
             0x4000 => {
                 let (x, byte) = Instruction::get_register_and_byte(opcode);
-                Ok(Instruction::CondVxNNEq(x, byte))
+                Ok(Instruction::CondVxNNNeq(x, byte))
             }
             0x5000 => {
                 let (x, y) = Instruction::get_registers(opcode);

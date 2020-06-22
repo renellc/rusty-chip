@@ -1,4 +1,5 @@
 mod instructions;
+mod instructions_test;
 
 use instructions::Instruction;
 use std::convert::TryFrom;
