@@ -1,5 +1,35 @@
 use std::convert::TryFrom;
 
+/// The instructions available on the CHIP-8 CPU. Each enum contains all the necessary information needed to carry out
+/// the instruction (memory address, register number, byte value, etc.), but does not perform the instruction itself.
+///
+/// # Instructions format
+/// The instructions on the CHIP-8 emulator fall into three main types: An instruction which contains a register number
+/// some byte value, an instruction which contains a memory address, and an instruction which contains 2 register
+/// numbers.
+///
+/// All enums have their information organized like the following (with the exception of
+/// Instruction::DisplayClear and Instruction::FlowReturn): If the opcode contains a memory address, then the num will
+/// simply have the memory address contained within it. If the opcode contains a register and a byte value, the register
+/// value will come first then the byte value follows it. If the opcode contains two registers, then register X will
+/// come first, and register Y follows.
+///
+/// # Enum value types
+/// All register values found in an enum of of type `usize`, while byte values are of type `u8`, so it should be able to
+/// decipher what value is what based on this alone. `Instruction::FlowCall` contains a `u16` value as it needs to be
+/// pushed on to the stack. `Instruction::FlowJump` contains a `usize` value as it will be used to index the memory
+/// address array found in the `cpu::CPU` struct.
+///
+/// # Examples
+///
+/// `0x1AF0` => `Instruction::FlowJump(0xAF0)`,
+///
+/// `0x74F2` => `Instruction::ConstVxAddNN(0x4, 0xF2)`,
+///
+/// `0x8720` => `Instruction::AssignVxVy(0x7, 0x2)`
+///
+/// See https://en.wikipedia.org/wiki/CHIP-8#Opcode_table for more information, as well as verification that these
+/// opcodes are being decoded correctly.
 #[derive(Debug)]
 pub enum Instruction {
     /// Clears the display.
@@ -73,6 +103,34 @@ pub enum Instruction {
     /// Stores the most significant bit of Vx in VF and then shifts Vx to the left by 1.
     /// Opcode: 8XYE
     BitOpShiftLeft(usize, usize),
+
+    /// Skips the next instruction if Vx does not equals Vy.
+    /// Opcode: 9XY0
+    CondVxVyNeq(usize, usize),
+
+    /// Sets I to the address NNN.
+    /// Opcode: ANNN
+    MemSetIAddress(u16),
+
+    /// Jumps to the address NNN plus the value stored in V0.
+    /// Opcode: BNNN
+    FlowJumpOffsetV0(usize),
+
+    /// Sets Vx to the result of a bitwise operation on a random number (0 - 255) and NN.
+    /// Opcode: CXNN
+    RandomANDVxNN(usize, u8),
+
+    /// Draws a sprite at coordinate (Vx, Vy) that has a width of 8 pixels and a height of N pixels.
+    /// Opcode: DXYN
+    DrawSprite(usize, usize, usize),
+
+    /// Skips the next instruction if the key stored in Vx is pressed.
+    /// Opcode: EX9E
+    KeyOpKeyPressed(usize),
+
+    /// Skips the next instruction if the key stored in Vx is pressed.
+    /// Opcode: EXA1
+    KeyOpKeyNotPressed(usize),
 }
 
 impl Instruction {
@@ -86,6 +144,10 @@ impl Instruction {
         let x = (opcode & 0xF00) >> 8;
         let byte = opcode & 0xFF;
         (x as usize, byte as u8)
+    }
+
+    fn get_address(opcode: u16) -> u16 {
+        opcode & 0xFFF
     }
 }
 
@@ -141,6 +203,33 @@ impl TryFrom<u16> for Instruction {
                     0x6 => Ok(Instruction::BitOpShiftRight(x, y)),
                     0x7 => Ok(Instruction::MathVyVxSub(x, y)),
                     0xE => Ok(Instruction::BitOpShiftLeft(x, y)),
+                    _ => Err(format!("Opcode {} not allowed", opcode)),
+                }
+            }
+            0x9000 => {
+                let (x, y) = Instruction::get_registers(opcode);
+                Ok(Instruction::CondVxVyNeq(x, y))
+            }
+            0xA000 => Ok(Instruction::MemSetIAddress(Instruction::get_address(
+                opcode,
+            ))),
+            0xB000 => Ok(Instruction::FlowJumpOffsetV0(
+                Instruction::get_address(opcode) as usize,
+            )),
+            0xC000 => {
+                let (x, byte) = Instruction::get_register_and_byte(opcode);
+                Ok(Instruction::RandomANDVxNN(x, byte))
+            }
+            0xD000 => {
+                let (x, y) = Instruction::get_registers(opcode);
+                let height = value & 0xF;
+                Ok(Instruction::DrawSprite(x, y, height as usize))
+            }
+            0xE000 => {
+                let register = ((value & 0xF00) >> 8) as usize;
+                match value & 0xFF {
+                    0x9E => Ok(Instruction::KeyOpKeyPressed(register)),
+                    0xA1 => Ok(Instruction::KeyOpKeyNotPressed(register)),
                     _ => Err(format!("Opcode {} not allowed", opcode)),
                 }
             }
