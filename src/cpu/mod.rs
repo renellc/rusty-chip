@@ -6,6 +6,25 @@ use rand::Rng;
 use std::convert::TryFrom;
 use std::fs;
 
+const FONTSET: [u8; 80] = [
+    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+    0x20, 0x60, 0x20, 0x20, 0x70, // 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+    0xF0, 0x80, 0xF0, 0x80, 0x80, // F
+];
+
 pub struct CPU {
     memory: [u8; 4096],
     registers: [u8; 16],
@@ -20,7 +39,7 @@ pub struct CPU {
 
 impl CPU {
     pub fn new() -> Self {
-        CPU {
+        let mut cpu = CPU {
             memory: [0; 4096],
             registers: [0; 16],
             stack: [0; 16],
@@ -30,7 +49,14 @@ impl CPU {
             sp: 0,
             i: 0,
             rand: rand::thread_rng(),
+        };
+
+        // Load fonts into memory
+        for (i, byte) in FONTSET.iter().enumerate() {
+            cpu.memory[i + 0x50] = *byte;
         }
+
+        cpu
     }
 
     /// Loads a CHIP-8 rom file into the memory.
@@ -59,13 +85,15 @@ impl CPU {
             Instruction::DisplayClear => {}
             Instruction::FlowReturn => {
                 self.sp -= 1;
+                self.pc = self.stack[self.pc] as usize;
             }
             Instruction::FlowJump(addr) => {
                 self.pc = addr;
             }
             Instruction::FlowCall(addr) => {
-                self.stack[self.sp] = addr;
+                self.stack[self.sp] = self.pc as u16;
                 self.sp += 1;
+                self.pc = addr as usize;
             }
             Instruction::CondVxNNEq(reg, byte) => {
                 if self.registers[reg] == byte {
