@@ -131,6 +131,42 @@ pub enum Instruction {
     /// Skips the next instruction if the key stored in Vx is pressed.
     /// Opcode: EXA1
     KeyOpKeyNotPressed(usize),
+
+    /// Sets Vx to the delay timer value.
+    /// Opcode: FX07
+    DelayTimerSaveVx(usize),
+
+    /// Wait for the next key press, then store it in Vx. Note that this is a blocking operation.
+    /// Opcode: FX0A
+    KeyOpGetKey(usize),
+
+    /// Sets the delay timer to Vx.
+    /// Opcode: FX15
+    DelayTimerSetVx(usize),
+
+    /// Sets the sound timer to Vx.
+    /// Opcode: FX18
+    SoundTimerSetVx(usize),
+
+    /// Adds Vx to register I. VF is not affected.
+    /// Opcode: FX1E
+    MemAddIVx(usize),
+
+    /// Sets register I to the location of the sprite for the character in Vx.
+    /// Opcode: FX29
+    MemSetISprite(usize),
+
+    /// Stores the binary-coded decimal (BCD) representation of Vx in (I=BCD(3)), (I+1=BCD(2)), and (I+2=BCD(1)).
+    /// Opcode: FX33
+    BCDSave(usize),
+
+    /// Stores V0 to Vx in memory starting at address I.
+    /// Opcode: FX55
+    MemRegisterDump(usize),
+
+    /// Loads V0 to Vx with the values from memory starting at address I.
+    /// Opcode: FX65
+    MemRegisterLoad(usize),
 }
 
 impl Instruction {
@@ -222,14 +258,29 @@ impl TryFrom<u16> for Instruction {
             }
             0xD000 => {
                 let (x, y) = Instruction::get_registers(opcode);
-                let height = value & 0xF;
+                let height = opcode & 0xF;
                 Ok(Instruction::DrawSprite(x, y, height as usize))
             }
             0xE000 => {
-                let register = ((value & 0xF00) >> 8) as usize;
-                match value & 0xFF {
+                let register = ((opcode & 0xF00) >> 8) as usize;
+                match opcode & 0xFF {
                     0x9E => Ok(Instruction::KeyOpKeyPressed(register)),
                     0xA1 => Ok(Instruction::KeyOpKeyNotPressed(register)),
+                    _ => Err(format!("Opcode {} not allowed", opcode)),
+                }
+            }
+            0xF000 => {
+                let register = ((opcode & 0xF00) >> 8) as usize;
+                match opcode & 0xFF {
+                    0x07 => Ok(Instruction::DelayTimerSaveVx(register)),
+                    0x0A => Ok(Instruction::KeyOpGetKey(register)),
+                    0x15 => Ok(Instruction::DelayTimerSetVx(register)),
+                    0x18 => Ok(Instruction::SoundTimerSetVx(register)),
+                    0x1E => Ok(Instruction::MemAddIVx(register)),
+                    0x29 => Ok(Instruction::MemSetISprite(register)),
+                    0x33 => Ok(Instruction::BCDSave(register)),
+                    0x55 => Ok(Instruction::MemRegisterDump(register)),
+                    0x65 => Ok(Instruction::MemRegisterLoad(register)),
                     _ => Err(format!("Opcode {} not allowed", opcode)),
                 }
             }
