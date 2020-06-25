@@ -18,7 +18,7 @@ use std::convert::TryFrom;
 /// All register values found in an enum of of type `usize`, while byte values are of type `u8`, so it should be able to
 /// decipher what value is what based on this alone. `Instruction::FlowCall` contains a `u16` value as it needs to be
 /// pushed on to the stack. `Instruction::FlowJump` contains a `usize` value as it will be used to index the memory
-/// address array found in the `cpu::CPU` struct.
+/// address array found in the `chip8::CPU` struct.
 ///
 /// # Examples
 ///

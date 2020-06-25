@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod instructions_parse_test {
-    use crate::cpu::instructions::Instruction;
+    use crate::chip8::instructions::Instruction;
     use std::convert::TryFrom;
 
     #[test]

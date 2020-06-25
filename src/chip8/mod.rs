@@ -1,77 +1,43 @@
 mod instructions;
 mod instructions_test;
+mod memory;
+mod stack;
 
 use instructions::Instruction;
 use rand::Rng;
 use std::convert::TryFrom;
-use std::fs;
 
-const FONTSET: [u8; 80] = [
-    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-    0x20, 0x60, 0x20, 0x20, 0x70, // 1
-    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-    0xF0, 0x80, 0xF0, 0x80, 0x80, // F
-];
-
-pub struct CPU {
-    memory: [u8; 4096],
+pub struct Chip8 {
+    memory: memory::Memory,
+    stack: stack::Stack,
     registers: [u8; 16],
-    stack: [u16; 16],
     delay_timer: u8,
     sound_timer: u8,
-    pc: usize,
-    sp: usize,
     i: u16,
     rand: rand::rngs::ThreadRng,
 }
 
-impl CPU {
+impl Chip8 {
     pub fn new() -> Self {
-        let mut cpu = CPU {
-            memory: [0; 4096],
+        Chip8 {
+            memory: memory::Memory::new(),
+            stack: stack::Stack::new(),
             registers: [0; 16],
-            stack: [0; 16],
             delay_timer: 0,
             sound_timer: 0,
-            pc: 0x200,
-            sp: 0,
             i: 0,
             rand: rand::thread_rng(),
-        };
-
-        // Load fonts into memory
-        for (i, byte) in FONTSET.iter().enumerate() {
-            cpu.memory[i + 0x50] = *byte;
         }
-
-        cpu
     }
 
     /// Loads a CHIP-8 rom file into the memory.
     pub fn load_rom(&mut self, file_path: &str) {
-        let buffer = fs::read(file_path).unwrap();
-        for (i, char) in buffer.iter().enumerate() {
-            self.memory[self.pc + i] = *char;
-        }
+        self.memory.load_rom(file_path);
     }
 
     /// Fetches the opcode at the current program counter.
     pub fn fetch_opcode(&self) -> u16 {
-        let hi = (self.memory[self.pc] as u16) << 8;
-        let lo = self.memory[self.pc + 1] as u16;
-        hi | lo
+        self.memory.fetch_opcode()
     }
 
     /// Decodes the current opcode into a readable instruction.
@@ -84,30 +50,29 @@ impl CPU {
         match instr {
             Instruction::DisplayClear => {}
             Instruction::FlowReturn => {
-                self.sp -= 1;
-                self.pc = self.stack[self.pc] as usize;
+                self.stack.pop();
+                self.memory.jump(self.stack.peek() as usize);
             }
             Instruction::FlowJump(addr) => {
-                self.pc = addr;
+                self.memory.jump(addr);
             }
             Instruction::FlowCall(addr) => {
-                self.stack[self.sp] = self.pc as u16;
-                self.sp += 1;
-                self.pc = addr as usize;
+                self.stack.push(self.memory.get_program_counter() as u16);
+                self.memory.jump(addr as usize);
             }
             Instruction::CondVxNNEq(reg, byte) => {
                 if self.registers[reg] == byte {
-                    self.pc += 2;
+                    self.memory.skip_next();
                 }
             }
             Instruction::CondVxNNNeq(reg, byte) => {
                 if self.registers[reg] != byte {
-                    self.pc += 2;
+                    self.memory.skip_next();
                 }
             }
             Instruction::CondVxVyEq(x, y) => {
                 if self.registers[x] == self.registers[y] {
-                    self.pc += 2;
+                    self.memory.skip_next();
                 }
             }
             Instruction::ConstVxNN(reg, byte) => {
@@ -173,14 +138,14 @@ impl CPU {
             }
             Instruction::CondVxVyNeq(x, y) => {
                 if self.registers[x] == self.registers[y] {
-                    self.pc += 2;
+                    self.memory.skip_next();
                 }
             }
             Instruction::MemSetIAddress(addr) => {
                 self.i = addr;
             }
             Instruction::FlowJumpOffsetV0(addr) => {
-                self.pc = addr + (self.registers[0] as usize);
+                self.memory.jump(addr + (self.registers[0] as usize));
             }
             Instruction::RandomANDVxNN(reg, byte) => {
                 self.registers[reg] = self.rand.gen::<u8>() & byte;
@@ -199,25 +164,26 @@ impl CPU {
                 self.sound_timer = self.registers[reg];
             }
             Instruction::MemAddIVx(reg) => {
-                self.i += (self.registers[reg] as u16);
+                self.i += self.registers[reg] as u16;
             }
             Instruction::MemSetISprite(_) => {}
             Instruction::BCDSave(reg) => {
                 let mut value: u8 = self.registers[reg];
 
                 for offset in (0..3).rev() {
-                    self.memory[(self.i + offset) as usize] = value % 10;
+                    self.memory.set_mem((self.i + offset) as usize, value % 10);
                     value /= 10;
                 }
             }
             Instruction::MemRegisterDump(reg_end) => {
                 for reg in 0..(reg_end + 1) {
-                    self.memory[(self.i + reg as u16) as usize] = self.registers[reg];
+                    self.memory
+                        .set_mem((self.i + reg as u16) as usize, self.registers[reg]);
                 }
             }
             Instruction::MemRegisterLoad(reg_end) => {
                 for reg in 0..(reg_end + 1) {
-                    self.registers[reg] = self.memory[(self.i + reg as u16) as usize];
+                    self.registers[reg] = self.memory.get_mem((self.i + reg as u16) as usize);
                 }
             }
         }

@@ -1,4 +1,4 @@
-mod cpu;
+mod chip8;
 mod display;
 
 use sdl2;
