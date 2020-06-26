@@ -1,3 +1,5 @@
+mod display;
+mod input;
 mod instructions;
 mod instructions_test;
 mod memory;
@@ -15,10 +17,14 @@ pub struct Chip8 {
     sound_timer: u8,
     i: u16,
     rand: rand::rngs::ThreadRng,
+    input: input::Input,
+    display: display::Display,
 }
 
 impl Chip8 {
     pub fn new() -> Self {
+        let sdl_ctx = sdl2::init().unwrap();
+
         Chip8 {
             memory: memory::Memory::new(),
             stack: stack::Stack::new(),
@@ -27,6 +33,8 @@ impl Chip8 {
             sound_timer: 0,
             i: 0,
             rand: rand::thread_rng(),
+            input: input::Input::new(&sdl_ctx),
+            display: display::Display::new(&sdl_ctx, 10),
         }
     }
 
@@ -151,12 +159,28 @@ impl Chip8 {
                 self.registers[reg] = self.rand.gen::<u8>() & byte;
             }
             Instruction::DrawSprite(_, _, _) => {}
-            Instruction::KeyOpKeyPressed(_) => {}
-            Instruction::KeyOpKeyNotPressed(_) => {}
+            Instruction::KeyOpKeyPressed(reg) => {
+                if self.input.is_pressed(self.registers[reg] as usize) {
+                    self.memory.skip_next();
+                }
+            }
+            Instruction::KeyOpKeyNotPressed(reg) => {
+                if !self.input.is_pressed(self.registers[reg] as usize) {
+                    self.memory.skip_next();
+                }
+            }
             Instruction::DelayTimerSaveVx(reg) => {
                 self.registers[reg] = self.delay_timer;
             }
-            Instruction::KeyOpGetKey(_) => {}
+            Instruction::KeyOpGetKey(reg) => 'key_wait: loop {
+                self.input.get_inputs();
+                for i in 0..16 as usize {
+                    if self.input.is_pressed(i) {
+                        self.registers[reg] = i as u8;
+                        break 'key_wait;
+                    }
+                }
+            },
             Instruction::DelayTimerSetVx(reg) => {
                 self.delay_timer = self.registers[reg];
             }

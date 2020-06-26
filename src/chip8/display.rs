@@ -1,13 +1,13 @@
 use sdl2::render::WindowCanvas;
-use sdl2::VideoSubsystem;
 
 pub struct Display {
     pub canvas: WindowCanvas,
 }
 
 impl Display {
-    pub fn new(ctx: VideoSubsystem, window_scale: u32) -> Self {
-        let window = ctx
+    pub fn new(ctx: &sdl2::Sdl, window_scale: u32) -> Self {
+        let video = ctx.video().unwrap();
+        let window = video
             .window("CHIP-8 Emulator", 64 * window_scale, 32 * window_scale)
             .position_centered()
             .opengl()
