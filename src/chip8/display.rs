@@ -58,7 +58,7 @@ impl Display {
                 } else {
                     Color::BLACK
                 });
-                self.canvas.fill_rect(Rect::new(
+                let _ = self.canvas.fill_rect(Rect::new(
                     x_pos as i32,
                     y_pos as i32,
                     self.scale,

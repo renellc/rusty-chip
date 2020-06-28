@@ -254,7 +254,7 @@ impl Chip8 {
             }
             Instruction::MemSetISprite(reg) => {
                 let digit = self.registers[reg];
-                self.i = (0x50u8.wrapping_add(5 * digit)) as u16;
+                self.i = 0x50u16.wrapping_add(5 * digit as u16);
                 self.memory.next_instruction();
             }
             Instruction::BCDSave(reg) => {
