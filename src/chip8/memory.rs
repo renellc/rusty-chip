@@ -69,7 +69,7 @@ impl Memory {
     }
 
     /// Skips the next opcode in memory.
-    pub fn skip_next(&mut self) {
+    pub fn next_instruction(&mut self) {
         self.program_counter += 2;
     }
 

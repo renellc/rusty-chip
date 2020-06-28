@@ -2,6 +2,7 @@ use sdl2::render::WindowCanvas;
 
 pub struct Display {
     pub canvas: WindowCanvas,
+    pub screen: [[bool; 64]; 32]
 }
 
 impl Display {
@@ -18,6 +19,14 @@ impl Display {
         canvas.clear();
         canvas.present();
 
-        Display { canvas }
+        Display { canvas, screen: [[false; 64]; 32] }
+    }
+
+    pub fn clear_screen(&mut self) {
+        for x in 0..self.screen.len() {
+            for y in 0..self.screen[x].len() {
+                self.screen[x][y] = false;
+            }
+        }
     }
 }

@@ -56,7 +56,9 @@ impl Chip8 {
     /// Executes the specified instruction of the CPU.
     pub fn execute_instruction(&mut self, instr: Instruction) {
         match instr {
-            Instruction::DisplayClear => {}
+            Instruction::DisplayClear => {
+                self.display.clear_screen();
+            }
             Instruction::FlowReturn => {
                 self.stack.pop();
                 self.memory.jump(self.stack.peek() as usize);
@@ -70,17 +72,17 @@ impl Chip8 {
             }
             Instruction::CondVxNNEq(reg, byte) => {
                 if self.registers[reg] == byte {
-                    self.memory.skip_next();
+                    self.memory.next_instruction();
                 }
             }
             Instruction::CondVxNNNeq(reg, byte) => {
                 if self.registers[reg] != byte {
-                    self.memory.skip_next();
+                    self.memory.next_instruction();
                 }
             }
             Instruction::CondVxVyEq(x, y) => {
                 if self.registers[x] == self.registers[y] {
-                    self.memory.skip_next();
+                    self.memory.next_instruction();
                 }
             }
             Instruction::ConstVxNN(reg, byte) => {
@@ -146,7 +148,7 @@ impl Chip8 {
             }
             Instruction::CondVxVyNeq(x, y) => {
                 if self.registers[x] == self.registers[y] {
-                    self.memory.skip_next();
+                    self.memory.next_instruction();
                 }
             }
             Instruction::MemSetIAddress(addr) => {
@@ -158,15 +160,34 @@ impl Chip8 {
             Instruction::RandomANDVxNN(reg, byte) => {
                 self.registers[reg] = self.rand.gen::<u8>() & byte;
             }
-            Instruction::DrawSprite(_, _, _) => {}
+            Instruction::DrawSprite(x, y, height) => {
+                let (x_pos, y_pos) = (self.registers[x], self.registers[y]);
+                self.registers[0xF] = 0;
+
+                for y in 0..height {
+                    let byte = self.memory.get_mem(self.i as usize + y);
+                    // We go up to 8 since each row in memory is 8 bits long
+                    for x in 0..8 {
+                        let pixel_on = byte & (0x80 >> col);
+                        if pixel_on {
+                            let pixel = if self.display.screen[y_pos][x_pos] { 1 } else { 0 };
+                            let collision_occurs = pixel == 0xFFFFFFFF;
+                            if collision_occurs {
+                                self.registers[0xF] = 1;
+                            }
+                            self.display.screen[y_pos][x_pos] = pixel ^ 0xFFFFFFFF == 1;
+                        }
+                    }
+                }
+            }
             Instruction::KeyOpKeyPressed(reg) => {
                 if self.input.is_pressed(self.registers[reg] as usize) {
-                    self.memory.skip_next();
+                    self.memory.next_instruction();
                 }
             }
             Instruction::KeyOpKeyNotPressed(reg) => {
                 if !self.input.is_pressed(self.registers[reg] as usize) {
-                    self.memory.skip_next();
+                    self.memory.next_instruction();
                 }
             }
             Instruction::DelayTimerSaveVx(reg) => {
