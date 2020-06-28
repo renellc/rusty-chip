@@ -211,7 +211,10 @@ impl Chip8 {
             Instruction::MemAddIVx(reg) => {
                 self.i += self.registers[reg] as u16;
             }
-            Instruction::MemSetISprite(_) => {}
+            Instruction::MemSetISprite(reg) => {
+                let digit = self.registers[reg];
+                self.i = (0x50 + (5 * digit)) as u16;
+            }
             Instruction::BCDSave(reg) => {
                 let mut value: u8 = self.registers[reg];
 
