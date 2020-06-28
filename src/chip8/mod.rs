@@ -226,16 +226,20 @@ impl Chip8 {
                 self.registers[reg] = self.delay_timer;
                 self.memory.next_instruction();
             }
-            Instruction::KeyOpGetKey(reg) => 'key_wait: loop {
-                self.input.get_inputs();
-                for i in 0..16 as usize {
-                    if self.input.is_pressed(i) {
-                        self.registers[reg] = i as u8;
-                        break 'key_wait;
+            Instruction::KeyOpGetKey(reg) => {
+                'key_wait: loop {
+                    self.input.get_inputs();
+                    for i in 0..16 as usize {
+                        if self.input.is_pressed(i) {
+                            self.registers[reg] = i as u8;
+                            break 'key_wait;
+                        } else if self.input.should_quit() {
+                            break 'key_wait;
+                        }
                     }
                 }
                 self.memory.next_instruction();
-            },
+            }
             Instruction::DelayTimerSetVx(reg) => {
                 self.delay_timer = self.registers[reg];
                 self.memory.next_instruction();
@@ -250,7 +254,7 @@ impl Chip8 {
             }
             Instruction::MemSetISprite(reg) => {
                 let digit = self.registers[reg];
-                self.i = (0x50 + (5 * digit)) as u16;
+                self.i = (0x50u8.wrapping_add(5 * digit)) as u16;
                 self.memory.next_instruction();
             }
             Instruction::BCDSave(reg) => {

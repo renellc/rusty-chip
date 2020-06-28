@@ -28,6 +28,6 @@ fn main() {
         }
 
         emu.input.get_inputs();
-        // thread::sleep(Duration::from_millis(1000 / 60));
+        thread::sleep(Duration::from_millis(16));
     }
 }
