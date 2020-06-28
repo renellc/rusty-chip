@@ -188,29 +188,26 @@ impl Chip8 {
                 self.memory.next_instruction();
             }
             Instruction::DrawSprite(x, y, height) => {
-                let (x_pos, y_pos) = (self.registers[x], self.registers[y]);
+                let (x_pos, y_pos) = (self.registers[x] as usize, self.registers[y] as usize);
                 self.registers[0xF] = 0;
 
-                for y in 0..height {
-                    let byte = self.memory.get_mem(self.i as usize + y);
-                    // We go up to 8 since each row in memory is 8 bits long
-                    for x in 0..8 {
-                        let pixel_on = byte & (0x80 >> x) != 0;
-                        if pixel_on {
-                            let pixel = if self.display.screen[y_pos as usize][x_pos as usize] {
-                                1 as u32
-                            } else {
-                                0 as u32
-                            };
-                            let collision_occurs = pixel == 0xFFFFFFFF;
-                            if collision_occurs {
-                                self.registers[0xF] = 1;
-                            }
-                            self.display.screen[y_pos as usize][x_pos as usize] =
-                                pixel ^ 0xFFFFFFFF == 1;
+                for curr_height in 0..height {
+                    // Gets the y position of the pixel. If the pixel goes off screen, we need to get the position it
+                    // would be at on the other side of the screen, so we mod it by our screen height. This same
+                    // logic follows for the x position, but we mod it by the screen width instead.
+                    let y = (y_pos + curr_height) % 32;
+                    for curr_bit in 0..8 {
+                        let x = (x_pos + curr_bit) % 64;
+                        let pixel = self.memory.get_mem(self.i as usize + curr_height);
+                        let is_bit_set = pixel & (0x80 >> curr_bit) as u8 != 0;
+                        if is_bit_set {
+                            self.registers[0xF] = 1;
+                            self.display.screen[x][y] ^= 1;
                         }
                     }
                 }
+
+                self.display.set_should_draw(true);
                 self.memory.next_instruction();
             }
             Instruction::KeyOpKeyPressed(reg) => {

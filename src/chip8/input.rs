@@ -161,7 +161,8 @@ impl Input {
                 Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
-                } => self.quit = true,
+                }
+                | Event::Quit { .. } => self.quit = true,
                 _ => {}
             }
         }

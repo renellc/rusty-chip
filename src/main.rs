@@ -16,14 +16,18 @@ fn main() {
     emu.load_rom(rom_path);
 
     loop {
+        emu.display.set_should_draw(false);
         emu.emulate_cycle();
-        emu.display.draw_screen();
-        emu.input.get_inputs();
+
+        if emu.display.should_draw() {
+            emu.display.draw_screen();
+        }
 
         if emu.input.should_quit() {
             break;
         }
 
-        thread::sleep(Duration::from_millis(1000 / 60));
+        emu.input.get_inputs();
+        // thread::sleep(Duration::from_millis(1000 / 60));
     }
 }

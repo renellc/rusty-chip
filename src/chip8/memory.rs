@@ -52,8 +52,9 @@ impl Memory {
     pub fn load_rom(&mut self, rom: &str) {
         let buffer = fs::read(rom).unwrap();
         for (i, char) in buffer.iter().enumerate() {
-            self.mem[self.program_counter + i] = *char;
+            self.mem[0x200 + i] = *char;
         }
+        self.program_counter = CHIP8_MEM_START;
     }
 
     /// Fetches the next opcode in memory.

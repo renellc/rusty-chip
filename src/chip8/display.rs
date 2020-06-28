@@ -4,8 +4,9 @@ use sdl2::render::WindowCanvas;
 
 pub struct Display {
     pub canvas: WindowCanvas,
-    pub screen: [[bool; 64]; 32],
+    pub screen: [[u8; 32]; 64],
     scale: u32,
+    should_draw: bool,
 }
 
 impl Display {
@@ -24,15 +25,24 @@ impl Display {
 
         Display {
             canvas,
-            screen: [[false; 64]; 32],
+            screen: [[0; 32]; 64],
             scale: window_scale,
+            should_draw: false,
         }
+    }
+
+    pub fn set_should_draw(&mut self, should_draw: bool) {
+        self.should_draw = should_draw
+    }
+
+    pub fn should_draw(&self) -> bool {
+        self.should_draw
     }
 
     pub fn clear_screen(&mut self) {
         for x in 0..self.screen.len() {
             for y in 0..self.screen[x].len() {
-                self.screen[x][y] = false;
+                self.screen[x][y] = 0;
             }
         }
     }
@@ -43,7 +53,7 @@ impl Display {
                 let x_pos = x as u32 * self.scale;
                 let y_pos = y as u32 * self.scale;
 
-                self.canvas.set_draw_color(if self.screen[x][y] {
+                self.canvas.set_draw_color(if self.screen[x][y] == 1 {
                     Color::WHITE
                 } else {
                     Color::BLACK
