@@ -48,8 +48,12 @@ impl Display {
                 } else {
                     Color::BLACK
                 });
-                self.canvas
-                    .fill_rect(Rect::new(x as i32, y as i32, self.scale, self.scale));
+                self.canvas.fill_rect(Rect::new(
+                    x_pos as i32,
+                    y_pos as i32,
+                    self.scale,
+                    self.scale,
+                ));
             }
         }
         self.canvas.present();

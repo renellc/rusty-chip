@@ -7,6 +7,7 @@ const CHIP8_NUM_KEYS: usize = 16;
 pub struct Input {
     event_pump: EventPump,
     keys: [bool; CHIP8_NUM_KEYS],
+    quit: bool,
 }
 
 impl Input {
@@ -14,11 +15,16 @@ impl Input {
         Input {
             event_pump: ctx.event_pump().unwrap(),
             keys: [false; CHIP8_NUM_KEYS],
+            quit: false,
         }
     }
 
     pub fn is_pressed(&self, key_num: usize) -> bool {
         self.keys[key_num]
+    }
+
+    pub fn should_quit(&self) -> bool {
+        self.quit
     }
 
     pub fn get_inputs(&mut self) {
@@ -152,6 +158,10 @@ impl Input {
                     keycode: Some(Keycode::V),
                     ..
                 } => self.keys[0xF] = false,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => self.quit = true,
                 _ => {}
             }
         }
