@@ -168,14 +168,19 @@ impl Chip8 {
                     let byte = self.memory.get_mem(self.i as usize + y);
                     // We go up to 8 since each row in memory is 8 bits long
                     for x in 0..8 {
-                        let pixel_on = byte & (0x80 >> col);
+                        let pixel_on = byte & (0x80 >> x) != 0;
                         if pixel_on {
-                            let pixel = if self.display.screen[y_pos][x_pos] { 1 } else { 0 };
+                            let pixel = if self.display.screen[y_pos as usize][x_pos as usize] {
+                                1 as u32
+                            } else {
+                                0 as u32
+                            };
                             let collision_occurs = pixel == 0xFFFFFFFF;
                             if collision_occurs {
                                 self.registers[0xF] = 1;
                             }
-                            self.display.screen[y_pos][x_pos] = pixel ^ 0xFFFFFFFF == 1;
+                            self.display.screen[y_pos as usize][x_pos as usize] =
+                                pixel ^ 0xFFFFFFFF == 1;
                         }
                     }
                 }
