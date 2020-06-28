@@ -1,8 +1,11 @@
 use sdl2::render::WindowCanvas;
+use sdl2::pixels::Color;
+use sdl2::rect::Rect;
 
 pub struct Display {
     pub canvas: WindowCanvas,
-    pub screen: [[bool; 64]; 32]
+    pub screen: [[bool; 64]; 32],
+    scale: u32
 }
 
 impl Display {
@@ -19,7 +22,7 @@ impl Display {
         canvas.clear();
         canvas.present();
 
-        Display { canvas, screen: [[false; 64]; 32] }
+        Display { canvas, screen: [[false; 64]; 32], scale: window_scale }
     }
 
     pub fn clear_screen(&mut self) {
@@ -28,5 +31,18 @@ impl Display {
                 self.screen[x][y] = false;
             }
         }
+    }
+
+    pub fn draw_screen(&mut self) {
+        for x in 0..self.screen.len() {
+            for y in 0..self.screen[x].len() {
+                let x_pos = x as u32 * self.scale;
+                let y_pos = y as u32 * self.scale;
+
+                self.canvas.set_draw_color(if self.screen[x][y] { Color::WHITE } else { Color::BLACK });
+                self.canvas.fill_rect(Rect::new(x as i32, y as i32, self.scale, self.scale));
+            }
+        }
+        self.canvas.present();
     }
 }
