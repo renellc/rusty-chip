@@ -52,7 +52,7 @@ impl Memory {
     pub fn load_rom(&mut self, rom: &str) {
         let buffer = fs::read(rom).unwrap();
         for (i, char) in buffer.iter().enumerate() {
-            self.mem[0x200 + i] = *char;
+            self.mem[CHIP8_MEM_START + i] = *char;
         }
         self.program_counter = CHIP8_MEM_START;
     }

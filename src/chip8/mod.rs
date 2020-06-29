@@ -78,7 +78,6 @@ impl Chip8 {
             Instruction::FlowCall(addr) => {
                 self.stack.push(self.memory.get_program_counter() as u16);
                 self.memory.jump(addr as usize);
-                self.memory.next_instruction();
             }
             Instruction::CondVxNNEq(reg, byte) => {
                 if self.registers[reg] == byte {
